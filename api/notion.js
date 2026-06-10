@@ -23,23 +23,31 @@ export default async function handler(req, res) {
         method: "POST",
         headers,
         body: JSON.stringify({
+          filter: {
+            property: "Data",
+            title: { starts_with: year }
+          },
           page_size: 100,
         }),
       });
 
       const data = await response.json();
-      
-      // 打印完整响应到 Vercel 日志
-      console.log("Notion API 完整响应:", JSON.stringify(data, null, 2));
 
-      return res.status(200).json(data);
+      const result = {};
+      for (const page of data.results || []) {
+        const date = page.properties.Data?.title?.[0]?.plain_text;
+        const count = page.properties.Count?.number ?? 0;
+        const pageId = page.id;
+        if (date) result[date] = { count, pageId };
+      }
+
+      return res.status(200).json(result);
     }
 
     // POST - 创建或更新数据
     if (req.method === "POST") {
       const { date, count, pageId } = req.body;
 
-      // 更新现有页面
       if (pageId) {
         if (count === 0) {
           await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
@@ -63,14 +71,13 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, pageId: data.id });
       }
 
-      // 创建新页面
       const response = await fetch("https://api.notion.com/v1/pages", {
         method: "POST",
         headers,
         body: JSON.stringify({
           parent: { database_id: DATABASE_ID },
           properties: {
-            Name: { title: [{ text: { content: date } }] },
+            Data: { title: [{ text: { content: date } }] },
             Count: { number: count },
           },
         }),
@@ -79,7 +86,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, pageId: data.id });
     }
 
-    // 其他方法
     return res.status(405).json({ error: "Method not allowed" });
     
   } catch (err) {
