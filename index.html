@@ -157,10 +157,10 @@
   <div class="color-section">
     <span>颜色</span>
     <div class="color-stop"><input type="color" id="c0" value="#ebedf0" oninput="rebuildColors()"><span>0</span></div>
-    <div class="color-stop"><input type="color" id="c1" value="hsl(185, 100%, 80%)" oninput="rebuildColors()"><span>1</span></div>
+    <div class="color-stop"><input type="color" id="c1" value="#b3e0ff" oninput="rebuildColors()"><span>1</span></div>
     <div class="color-stop"><input type="color" id="c2" value="#c1b2fede" oninput="rebuildColors()"><span>2</span></div>
-    <div class="color-stop"><input type="color" id="c3" value="hsl(130, 86%, 75%)" oninput="rebuildColors()"><span>3</span></div>
-    <div class="color-stop"><input type="color" id="c4" value="hsl(16, 86%, 68%)" oninput="rebuildColors()"><span>4次</span></div>
+    <div class="color-stop"><input type="color" id="c3" value="#c1b2fe" oninput="rebuildColors()"><span>3</span></div>
+    <div class="color-stop"><input type="color" id="c4" value="#ffaa88" oninput="rebuildColors()"><span>4次</span></div>
   </div>
 </div>
 <div class="status-bar" id="statusBar"></div>
@@ -209,7 +209,8 @@
   // ── State ───────────────────────────────────────────────
   let currentYear = new Date().getFullYear();
   let yearData = {};      // { "2025-03-14": { count: 3, pageId: "xxx" } }
-  let colorStops = ["#ebedf0","hsl(185, 100%, 80%)","#c1b2fede","hsl(130, 86%, 75%)","hsl(16, 86%, 68%)"];
+  #let colorStops = ["#ebedf0","hsl(185, 100%, 80%)","#c1b2fede","hsl(130, 86%, 75%)","hsl(16, 86%, 68%)"];
+  let colorStops = ["#ebedf0", "#b3e0ff", "#c1b2fe", "#a8e6a8", "#ffaa88"];
   let modalDate = null;
   let modalTemp = 0;
   const tooltip = document.getElementById("tooltip");
