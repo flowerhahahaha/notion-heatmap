@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>活动热力图</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      background: #fff;
+      color: #1a1a1a;
+      padding: 16px;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .nav-btn {
+      background: transparent;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      width: 28px; height: 28px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      color: #444;
+    }
+    .nav-btn:hover { background: #f4f4f4; }
+    .year-label { font-size: 15px; font-weight: 600; min-width: 48px; text-align: center; }
+
+    /* color pickers */
+    .color-section {
+      display: flex; align-items: center; gap: 6px;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+    .color-section > span { font-size: 12px; color: #888; }
+    .color-stop { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .color-stop span { font-size: 10px; color: #aaa; }
+    input[type=color] {
+      width: 24px; height: 24px;
+      border: 1px solid #ddd; border-radius: 4px;
+      cursor: pointer; padding: 0; background: none;
+    }
+
+    /* ── Stats ── */
+    .stats-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .stat-card {
+      background: #f6f6f6; border-radius: 8px;
+      padding: 7px 14px; text-align: center;
+    }
+    .stat-card .sv { font-size: 20px; font-weight: 600; }
+    .stat-card .sl { font-size: 11px; color: #888; margin-top: 1px; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex; align-items: center; gap: 5px;
+      margin-bottom: 10px; font-size: 12px; color: #888;
+    }
+    .legend-cells { display: flex; gap: 3px; }
+    .legend-cell { width: 13px; height: 13px; border-radius: 2px; }
+
+    /* ── Calendar grid ── */
+    .month-labels {
+      display: grid;
+      padding-left: 26px;
+      margin-bottom: 3px;
+      column-gap: 2px;
+    }
+    .month-label { font-size: 11px; color: #888; }
+    .grid-wrap { display: flex; gap: 4px; }
+    .day-labels { display: flex; flex-direction: column; gap: 2px; margin-top: 0; }
+    .day-label {
+      font-size: 10px; color: #aaa;
+      height: 15px; line-height: 15px;
+      width: 22px; text-align: right; padding-right: 4px;
+    }
+    .weeks { display: flex; gap: 2px; }
+    .week-col { display: flex; flex-direction: column; gap: 2px; }
+    .cell {
+      width: 15px; height: 15px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: transform 0.1s;
+      border: 0.5px solid transparent;
+    }
+    .cell:hover { transform: scale(1.35); z-index: 5; position: relative; border-color: rgba(0,0,0,0.2); }
+    .cell.empty { cursor: default; background: transparent !important; }
+    .cell.empty:hover { transform: none; border-color: transparent; }
+
+    /* ── Tooltip ── */
+    .tooltip {
+      position: fixed;
+      background: #1a1a1a; color: #fff;
+      border-radius: 5px; padding: 5px 9px;
+      font-size: 12px; pointer-events: none;
+      z-index: 999; display: none;
+      white-space: nowrap;
+    }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.25);
+      z-index: 500; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 12px;
+      border: 1px solid #e0e0e0;
+      padding: 20px; min-width: 220px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+    .modal h3 { font-size: 14px; font-weight: 500; margin-bottom: 14px; color: #333; }
+    .modal-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .count-btn {
+      width: 32px; height: 32px;
+      border: 1px solid #d0d0d0; background: transparent;
+      border-radius: 6px; cursor: pointer; font-size: 18px; color: #333;
+    }
+    .count-btn:hover { background: #f4f4f4; }
+    .count-display { font-size: 24px; font-weight: 600; min-width: 44px; text-align: center; }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-primary {
+      padding: 6px 16px; background: #1a1a1a; color: #fff;
+      border: none; border-radius: 6px; cursor: pointer; font-size: 13px;
+    }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-cancel {
+      padding: 6px 16px; background: transparent;
+      border: 1px solid #d0d0d0; border-radius: 6px;
+      cursor: pointer; font-size: 13px; color: #444;
+    }
+
+    /* ── Loading / error ── */
+    .status-bar {
+      font-size: 12px; color: #888; margin-bottom: 10px;
+      min-height: 16px;
+    }
+    .status-bar.error { color: #c0392b; }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button class="nav-btn" onclick="changeYear(-1)">‹</button>
+  <span class="year-label" id="yearLabel"></span>
+  <button class="nav-btn" onclick="changeYear(1)">›</button>
+
+  <div class="color-section">
+    <span>颜色</span>
+    <div class="color-stop"><input type="color" id="c0" value="#ebedf0" oninput="rebuildColors()"><span>0</span></div>
+    <div class="color-stop"><input type="color" id="c1" value="#c6e48b" oninput="rebuildColors()"><span>低</span></div>
+    <div class="color-stop"><input type="color" id="c2" value="#7bc96f" oninput="rebuildColors()"><span>中</span></div>
+    <div class="color-stop"><input type="color" id="c3" value="#239a3b" oninput="rebuildColors()"><span>高</span></div>
+    <div class="color-stop"><input type="color" id="c4" value="#196127" oninput="rebuildColors()"><span>最高</span></div>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+<div class="stats-row" id="statsRow"></div>
+<div class="legend">
+  <span>少</span>
+  <div class="legend-cells" id="legendCells"></div>
+  <span>多</span>
+</div>
+<div id="monthLabels" class="month-labels"></div>
+<div class="grid-wrap">
+  <div class="day-labels">
+    <div class="day-label" style="height:15px"></div>
+    <div class="day-label">一</div>
+    <div class="day-label" style="height:15px"></div>
+    <div class="day-label">三</div>
+    <div class="day-label" style="height:15px"></div>
+    <div class="day-label">五</div>
+    <div class="day-label" style="height:15px"></div>
+  </div>
+  <div class="weeks" id="weeksGrid"></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <h3 id="modalDate"></h3>
+    <div class="modal-row">
+      <button class="count-btn" onclick="adjustCount(-1)">−</button>
+      <span class="count-display" id="countDisplay">0</span>
+      <button class="count-btn" onclick="adjustCount(1)">+</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-primary" id="saveBtn" onclick="saveCount()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────
+  // 部署后这里会自动读取同域的 /api/notion
+  const API = "/api/notion";
+
+  // ── State ───────────────────────────────────────────────
+  let currentYear = new Date().getFullYear();
+  let yearData = {};      // { "2025-03-14": { count: 3, pageId: "xxx" } }
+  let colorStops = ["#ebedf0","#c6e48b","#7bc96f","#239a3b","#196127"];
+  let modalDate = null;
+  let modalTemp = 0;
+  const tooltip = document.getElementById("tooltip");
+
+  // ── Color helpers ────────────────────────────────────────
+  function rebuildColors() {
+    colorStops = ["c0","c1","c2","c3","c4"].map(id => document.getElementById(id).value);
+    renderGrid();
+  }
+  function getColor(count) {
+    if (!count || count <= 0) return colorStops[0];
+    const max = getMaxCount();
+    if (max === 0) return colorStops[0];
+    const r = count / max;
+    if (r < 0.25) return colorStops[1];
+    if (r < 0.5)  return colorStops[2];
+    if (r < 0.75) return colorStops[3];
+    return colorStops[4];
+  }
+  function getMaxCount() {
+    return Math.max(0, ...Object.values(yearData).map(v => v.count || 0));
+  }
+
+  // ── API calls ────────────────────────────────────────────
+  function setStatus(msg, isError) {
+    const el = document.getElementById("statusBar");
+    el.textContent = msg;
+    el.className = "status-bar" + (isError ? " error" : "");
+  }
+  async function fetchYear(year) {
+    setStatus("加载中…");
+    try {
+      const r = await fetch(`${API}?year=${year}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      yearData = await r.json();
+      setStatus("");
+      renderGrid();
+    } catch(e) {
+      setStatus("加载失败：" + e.message, true);
+    }
+  }
+  async function postCount(date, count, pageId) {
+    const r = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date, count, pageId }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
+
+  // ── Year navigation ──────────────────────────────────────
+  function changeYear(d) { currentYear += d; fetchYear(currentYear); }
+
+  // ── Render ───────────────────────────────────────────────
+  function renderGrid() {
+    document.getElementById("yearLabel").textContent = currentYear;
+    const jan1 = new Date(currentYear, 0, 1);
+    const dec31 = new Date(currentYear, 11, 31);
+    let startDow = jan1.getDay(); // 0=Sun
+    if (startDow === 0) startDow = 7;
+    startDow--;
+
+    const weeks = [];
+    let week = [];
+    for (let i = 0; i < startDow; i++) week.push(null);
+    const d = new Date(jan1);
+    while (d <= dec31) {
+      week.push(new Date(d));
+      if (week.length === 7) { weeks.push(week); week = []; }
+      d.setDate(d.getDate() + 1);
+    }
+    if (week.length > 0) {
+      while (week.length < 7) week.push(null);
+      weeks.push(week);
+    }
+
+    const grid = document.getElementById("weeksGrid");
+    grid.innerHTML = "";
+    weeks.forEach(w => {
+      const col = document.createElement("div");
+      col.className = "week-col";
+      w.forEach(day => {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        if (!day) {
+          cell.classList.add("empty");
+          cell.style.background = "transparent";
+        } else {
+          const key = dateKey(day);
+          const cnt = yearData[key]?.count || 0;
+          cell.style.background = getColor(cnt);
+          cell.addEventListener("click", () => openModal(day));
+          cell.addEventListener("mouseenter", e => showTip(e, key, cnt));
+          cell.addEventListener("mouseleave", hideTip);
+        }
+        col.appendChild(cell);
+      });
+      grid.appendChild(col);
+    });
+
+    renderMonthLabels(weeks);
+    renderLegend();
+    renderStats();
+  }
+
+  function renderMonthLabels(weeks) {
+    const months = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+    const ml = document.getElementById("monthLabels");
+    ml.innerHTML = "";
+    ml.style.gridTemplateColumns = `repeat(${weeks.length}, 17px)`;
+    let lastMonth = -1;
+    weeks.forEach(w => {
+      const first = w.find(d => d !== null);
+      const span = document.createElement("div");
+      span.className = "month-label";
+      if (first && first.getMonth() !== lastMonth) {
+        lastMonth = first.getMonth();
+        span.textContent = months[lastMonth];
+      }
+      ml.appendChild(span);
+    });
+  }
+
+  function renderLegend() {
+    const lc = document.getElementById("legendCells");
+    lc.innerHTML = "";
+    colorStops.forEach(c => {
+      const d = document.createElement("div");
+      d.className = "legend-cell";
+      d.style.background = c;
+      lc.appendChild(d);
+    });
+  }
+
+  function renderStats() {
+    const vals = Object.entries(yearData)
+      .filter(([k]) => k.startsWith(currentYear + "-"))
+      .map(([, v]) => v.count || 0);
+    const total = vals.reduce((a, b) => a + b, 0);
+    const days = vals.filter(v => v > 0).length;
+    const max = vals.length ? Math.max(...vals) : 0;
+    document.getElementById("statsRow").innerHTML = `
+      <div class="stat-card"><div class="sv">${total}</div><div class="sl">总次数</div></div>
+      <div class="stat-card"><div class="sv">${days}</div><div class="sl">活跃天数</div></div>
+      <div class="stat-card"><div class="sv">${max}</div><div class="sl">单日最高</div></div>
+    `;
+  }
+
+  // ── Tooltip ──────────────────────────────────────────────
+  function showTip(e, key, cnt) {
+    tooltip.textContent = key + "  " + cnt + " 次";
+    tooltip.style.display = "block";
+    tooltip.style.left = (e.clientX + 12) + "px";
+    tooltip.style.top  = (e.clientY - 30) + "px";
+  }
+  function hideTip() { tooltip.style.display = "none"; }
+
+  // ── Modal ────────────────────────────────────────────────
+  function openModal(day) {
+    modalDate = day;
+    const key = dateKey(day);
+    modalTemp = yearData[key]?.count || 0;
+    document.getElementById("modalDate").textContent = key;
+    document.getElementById("countDisplay").textContent = modalTemp;
+    document.getElementById("saveBtn").disabled = false;
+    document.getElementById("modalOverlay").classList.add("open");
+  }
+  function closeModal() { document.getElementById("modalOverlay").classList.remove("open"); }
+  function closeModalOutside(e) { if (e.target === document.getElementById("modalOverlay")) closeModal(); }
+  function adjustCount(d) {
+    modalTemp = Math.max(0, modalTemp + d);
+    document.getElementById("countDisplay").textContent = modalTemp;
+  }
+  async function saveCount() {
+    const key = dateKey(modalDate);
+    const pageId = yearData[key]?.pageId || null;
+    const btn = document.getElementById("saveBtn");
+    btn.disabled = true;
+    btn.textContent = "保存中…";
+    try {
+      const res = await postCount(key, modalTemp, pageId);
+      if (modalTemp === 0) {
+        delete yearData[key];
+      } else {
+        yearData[key] = { count: modalTemp, pageId: res.pageId || pageId };
+      }
+      renderGrid();
+      closeModal();
+    } catch(e) {
+      setStatus("保存失败：" + e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "保存";
+    }
+  }
+
+  // ── Utils ────────────────────────────────────────────────
+  function dateKey(d) {
+    return d.getFullYear() + "-"
+      + String(d.getMonth() + 1).padStart(2, "0") + "-"
+      + String(d.getDate()).padStart(2, "0");
+  }
+
+  // ── Init ─────────────────────────────────────────────────
+  fetchYear(currentYear);
+</script>
+</body>
+</html>
