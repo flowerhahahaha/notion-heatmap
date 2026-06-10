@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   try {
     // GET - 查询数据
     if (req.method === "GET") {
-      const { year } = req.query;
+      
 
       const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
         method: "POST",
