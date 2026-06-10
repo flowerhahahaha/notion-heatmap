@@ -1,4 +1,3 @@
-res.setHeader("Cache-Control", "no-store");
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const DATABASE_ID = process.env.NOTION_DATABASE_ID;
 
@@ -13,6 +12,7 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
+  res.setHeader("Cache-Control", "no-store");
 
   try {
     // GET /api/notion?year=2025 → fetch all records for that year
