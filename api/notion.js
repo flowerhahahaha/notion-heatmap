@@ -15,22 +15,25 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   try {
-    // GET /api/notion?year=2026
     if (req.method === "GET") {
-      const { year } = req.query;
+  const { year } = req.query;
 
-      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          filter: {
-            and: [
-              { property: "Date", title: { starts_with: year } }
-            ]
-          },
-          page_size: 100,
-        }),
-      });
+  const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      page_size: 10,
+      // 先不加 filter，看看能不能读到数据
+    }),
+  });
+
+  const data = await response.json();
+  
+  // 打印完整响应
+  console.log("完整响应:", JSON.stringify(data, null, 2));
+
+  return res.status(200).json(data);
+}
 
       const data = await response.json();
 
