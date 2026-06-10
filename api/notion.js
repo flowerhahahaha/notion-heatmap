@@ -67,7 +67,16 @@ export default async function handler(req, res) {
 
       const result = {};
       for (const page of data.results || []) {
-        const date = page.properties.Date?.title?.[0]?.plain_text;
+        #const date = page.properties.Date?.title?.[0]?.plain_text;
+        let date = null;
+          // 如果是 Title/Text 类型
+          if (page.properties.Date?.title?.[0]?.plain_text) {
+            date = page.properties.Date.title[0].plain_text;
+          }
+          // 如果是 Date 类型
+          else if (page.properties.Date?.date?.start) {
+            date = page.properties.Date.date.start;
+          }
         const count = page.properties.Count?.number ?? 0;
         const pageId = page.id;
         if (date) result[date] = { count, pageId };
