@@ -16,33 +16,18 @@ export default async function handler(req, res) {
 
   try {
     // GET - 查询数据
-    if (req.method === "GET") {
-      
+ if (req.method === "GET") {
+  const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ page_size: 100 }),
+  });
 
-      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          filter: {
-            property: "Data",
-            title: { starts_with: year }
-          },
-          page_size: 100,
-        }),
-      });
-
-      const data = await response.json();
-
-      const result = {};
-      for (const page of data.results || []) {
-        const date = page.properties.Data?.title?.[0]?.plain_text;
-        const count = page.properties.Count?.number ?? 0;
-        const pageId = page.id;
-        if (date) result[date] = { count, pageId };
-      }
-
-      return res.status(200).json(result);
-    }
+  const data = await response.json();
+  
+  // 直接返回原始数据
+  return res.status(200).json(data);
+}
 
     // POST - 创建或更新数据
     if (req.method === "POST") {
