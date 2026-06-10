@@ -15,24 +15,54 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   try {
-    // GET /api/notion?year=2025 → fetch all records for that year
-    if (req.method === "GET") {
-      const { year } = req.query;
-      const start = `${year}-01-01`;
-      const end = `${year}-12-31`;
+    // // GET /api/notion?year=2025 → fetch all records for that year
+    // if (req.method === "GET") {
+    //   const { year } = req.query;
+    //   const start = `${year}-01-01`;
+    //   const end = `${year}-12-31`;
 
-      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          filter: {
-            and: [
-              { property: "Date",title: { starts_with: year } }
-            ]
+    //   const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+    //     method: "POST",
+    //     headers,
+    //     body: JSON.stringify({
+    //       filter: {
+    //         and: [
+    //           { property: "Date",title: { starts_with: year } }
+    //         ]
+    //       },
+    //       page_size: 100,
+    //     }),
+    //   });
+    if (req.method === "GET") {
+  const { year } = req.query;
+  const startDate = `${year}-01-01`;
+  const endDate = `${year}-12-31`;
+
+  const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      filter: {
+        and: [
+          {
+            property: "Date",
+            date: {
+              on_or_after: startDate
+            }
           },
-          page_size: 100,
-        }),
-      });
+          {
+            property: "Date",
+            date: {
+              on_or_before: endDate
+            }
+          }
+        ]
+      },
+      page_size: 100,
+    }),
+  });
+  // ... 其余代码不变
+
       const data = await response.json();
 
       const result = {};
