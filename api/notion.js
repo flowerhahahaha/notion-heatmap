@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           filter: {
             and: [
-              { property: "Date", rich_text: { starts_with: year } }
+              { property: "Date",title: { starts_with: year } }
             ]
           },
           page_size: 100,
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
       const result = {};
       for (const page of data.results || []) {
-        const date = page.properties.Date?.rich_text?.[0]?.plain_text;
+        const date = page.properties.Date?.title?.[0]?.plain_text;
         const count = page.properties.Count?.number ?? 0;
         const pageId = page.id;
         if (date) result[date] = { count, pageId };
