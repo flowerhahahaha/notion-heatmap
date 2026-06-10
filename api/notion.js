@@ -16,23 +16,40 @@ export default async function handler(req, res) {
 
   try {
     // GET - 查询数据
- if (req.method === "GET") {
-  const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ page_size: 100 }),
-  });
+    if (req.method === "GET") {
+      const { year } = req.query;
 
-  const data = await response.json();
-  
-  // 直接返回原始数据
-  return res.status(200).json(data);
-}
+      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          filter: {
+            property: "Date", // 改回 Date
+            title: { starts_with: year }
+          },
+          page_size: 100,
+        }),
+      });
+
+      const data = await response.json();
+
+      const result = {};
+      for (const page of data.results || []) {
+        // 从 Date 列读取
+        const date = page.properties.Date?.title?.[0]?.plain_text;
+        const count = page.properties.Count?.number ?? 0;
+        const pageId = page.id;
+        if (date) result[date] = { count, pageId };
+      }
+
+      return res.status(200).json(result);
+    }
 
     // POST - 创建或更新数据
     if (req.method === "POST") {
       const { date, count, pageId } = req.body;
 
+      // 更新现有页面
       if (pageId) {
         if (count === 0) {
           await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
@@ -56,13 +73,14 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, pageId: data.id });
       }
 
+      // 创建新页面，使用 Date 列
       const response = await fetch("https://api.notion.com/v1/pages", {
         method: "POST",
         headers,
         body: JSON.stringify({
           parent: { database_id: DATABASE_ID },
           properties: {
-            Data: { title: [{ text: { content: date } }] },
+            Date: { title: [{ text: { content: date } }] }, // 改回 Date
             Count: { number: count },
           },
         }),
