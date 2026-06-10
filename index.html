@@ -219,16 +219,23 @@
     colorStops = ["c0","c1","c2","c3","c4"].map(id => document.getElementById(id).value);
     renderGrid();
   }
+  // function getColor(count) {
+  //   if (!count || count <= 0) return colorStops[0];
+  //   const max = getMaxCount();
+  //   if (max === 0) return colorStops[0];
+  //   const r = count / max;
+  //   if (r < 0.25) return colorStops[1];
+  //   if (r < 0.5)  return colorStops[2];
+  //   if (r < 0.75) return colorStops[3];
+  //   return colorStops[4];
+  // }
   function getColor(count) {
-    if (!count || count <= 0) return colorStops[0];
-    const max = getMaxCount();
-    if (max === 0) return colorStops[0];
-    const r = count / max;
-    if (r < 0.25) return colorStops[1];
-    if (r < 0.5)  return colorStops[2];
-    if (r < 0.75) return colorStops[3];
-    return colorStops[4];
-  }
+  if (!count || count <= 0) return colorStops[0];
+  if (count === 1) return colorStops[1];
+  if (count === 2) return colorStops[2];
+  if (count === 3) return colorStops[3];
+  return colorStops[4];  // 4次及以上
+}
   function getMaxCount() {
     return Math.max(0, ...Object.values(yearData).map(v => v.count || 0));
   }
