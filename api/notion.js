@@ -15,68 +15,38 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   try {
-    // // GET /api/notion?year=2025 → fetch all records for that year
-    // if (req.method === "GET") {
-    //   const { year } = req.query;
-    //   const start = `${year}-01-01`;
-    //   const end = `${year}-12-31`;
-
-    //   const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-    //     method: "POST",
-    //     headers,
-    //     body: JSON.stringify({
-    //       filter: {
-    //         and: [
-    //           { property: "Date",title: { starts_with: year } }
-    //         ]
-    //       },
-    //       page_size: 100,
-    //     }),
-    //   });
+    // GET /api/notion?year=2026
     if (req.method === "GET") {
-  const { year } = req.query;
-  const startDate = `${year}-01-01`;
-  const endDate = `${year}-12-31`;
+      const { year } = req.query;
 
-  const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      filter: {
-        and: [
-          {
-            property: "Date",
-            date: {
-              on_or_after: startDate
-            }
+      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          filter: {
+            and: [
+              { property: "Date", title: { starts_with: year } }
+            ]
           },
-          {
-            property: "Date",
-            date: {
-              on_or_before: endDate
-            }
-          }
-        ]
-      },
-      page_size: 100,
-    }),
-  });
-  // ... 其余代码不变
+          page_size: 100,
+        }),
+      });
 
       const data = await response.json();
 
       const result = {};
       for (const page of data.results || []) {
-        #const date = page.properties.Date?.title?.[0]?.plain_text;
+        // 兼容两种日期类型
         let date = null;
-          // 如果是 Title/Text 类型
-          if (page.properties.Date?.title?.[0]?.plain_text) {
-            date = page.properties.Date.title[0].plain_text;
-          }
-          // 如果是 Date 类型
-          else if (page.properties.Date?.date?.start) {
-            date = page.properties.Date.date.start;
-          }
+        // 如果是 Title/Text 类型
+        if (page.properties.Date?.title?.[0]?.plain_text) {
+          date = page.properties.Date.title[0].plain_text;
+        }
+        // 如果是 Date 类型
+        else if (page.properties.Date?.date?.start) {
+          date = page.properties.Date.date.start;
+        }
+        
         const count = page.properties.Count?.number ?? 0;
         const pageId = page.id;
         if (date) result[date] = { count, pageId };
@@ -84,7 +54,7 @@ export default async function handler(req, res) {
       return res.status(200).json(result);
     }
 
-    // POST /api/notion  body: { date, count, pageId? }
+    // POST /api/notion
     if (req.method === "POST") {
       const { date, count, pageId } = req.body;
 
